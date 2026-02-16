@@ -10,9 +10,21 @@ struct TTSPayload: Decodable {
 }
 
 final class JarvisAPIClient {
-    // Replace with your actual endpoint.
-    private let chatEndpoint = URL(string: "http://127.0.0.1:8787/api/watch-chat")!
-    private let ttsEndpoint = URL(string: "http://127.0.0.1:8787/api/watch-tts")!
+    // Simulator can hit localhost directly.
+    // Physical watch must use your Mac's LAN IP.
+    #if targetEnvironment(simulator)
+    private let baseURL = URL(string: "http://127.0.0.1:8787")!
+    #else
+    private let baseURL = URL(string: "http://192.168.8.196:8787")! // <-- update if your LAN IP changes
+    #endif
+
+    private var chatEndpoint: URL {
+        baseURL.appendingPathComponent("api/watch-chat")
+    }
+
+    private var ttsEndpoint: URL {
+        baseURL.appendingPathComponent("api/watch-tts")
+    }
 
     // Optional: if your backend requires x-api-key
     private let apiKey: String? = nil

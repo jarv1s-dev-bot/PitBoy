@@ -7,7 +7,7 @@ struct JarvisReply: Decodable {
 final class JarvisAPIClient {
     // Replace with your actual endpoint.
     // Example: https://your-domain.com/api/watch-chat
-    private let endpoint = URL(string: "https://example.com/api/watch-chat")!
+    private let endpoint = URL(string: "http://192.168.8.196:8787/api/watch-chat")!
 
     // Optional: if your backend requires x-api-key
     private let apiKey: String? = nil

@@ -43,7 +43,7 @@ struct ContentView: View {
                 }
 
                 HStack(spacing: 8) {
-                    Button(vm.isListening ? "STOP" : "TALK") {
+                    Button(vm.isListening ? "WAIT" : "DICTATE") {
                         vm.toggleListening()
                     }
                     .buttonStyle(PitBoyButtonStyle(isActive: vm.isListening))

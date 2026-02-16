@@ -15,18 +15,15 @@ final class PitBoyViewModel: ObservableObject {
 
     var statusText: String {
         if isSending { return "UPLINK: SENDING…" }
-        if isListening { return "MIC: ACTIVE" }
+        if isListening { return "DICTATION: ACTIVE" }
         return "READY"
     }
 
     func toggleListening() {
-        errorMessage = nil
+        guard !isListening else { return }
 
-        if isListening {
-            speechService.stopListening()
-            isListening = false
-            return
-        }
+        errorMessage = nil
+        isListening = true
 
         speechService.startListening(
             onPartial: { [weak self] text in
@@ -34,14 +31,11 @@ final class PitBoyViewModel: ObservableObject {
             },
             onError: { [weak self] error in
                 self?.errorMessage = error.localizedDescription
-                self?.isListening = false
             },
             onStopped: { [weak self] in
                 self?.isListening = false
             }
         )
-
-        isListening = true
     }
 
     func sendTranscript() async {

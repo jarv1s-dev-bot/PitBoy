@@ -1,85 +1,38 @@
 import Foundation
-import Speech
-import AVFoundation
+import WatchKit
 
 final class SpeechService {
-    private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-ZA")) ?? SFSpeechRecognizer()
-    private let audioEngine = AVAudioEngine()
-    private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
-    private var recognitionTask: SFSpeechRecognitionTask?
-
+    /// Uses native watchOS dictation UI and returns recognized text.
     func startListening(onPartial: @escaping (String) -> Void,
                         onError: @escaping (Error) -> Void,
                         onStopped: @escaping () -> Void) {
-        SFSpeechRecognizer.requestAuthorization { [weak self] auth in
-            guard auth == .authorized else {
-                DispatchQueue.main.async {
-                    onError(NSError(domain: "SpeechService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Speech permission denied"]))
-                }
+        guard let controller = WKExtension.shared().visibleInterfaceController else {
+            onError(NSError(domain: "SpeechService", code: 1, userInfo: [NSLocalizedDescriptionKey: "No visible watch interface controller"] ))
+            onStopped()
+            return
+        }
+
+        controller.presentTextInputController(withSuggestions: nil, allowedInputMode: .plain) { results in
+            defer { onStopped() }
+
+            guard let first = results?.first else { return }
+
+            if let text = first as? String {
+                onPartial(text)
                 return
             }
 
-            AVAudioSession.sharedInstance().requestRecordPermission { granted in
-                guard granted else {
-                    DispatchQueue.main.async {
-                        onError(NSError(domain: "SpeechService", code: 2, userInfo: [NSLocalizedDescriptionKey: "Microphone permission denied"]))
-                    }
-                    return
-                }
-
-                DispatchQueue.main.async {
-                    self?.beginRecognition(onPartial: onPartial, onError: onError, onStopped: onStopped)
-                }
+            // Some dictation modes can return attributed strings.
+            if let attributed = first as? NSAttributedString {
+                onPartial(attributed.string)
+                return
             }
+
+            onError(NSError(domain: "SpeechService", code: 2, userInfo: [NSLocalizedDescriptionKey: "Dictation returned unsupported format"]))
         }
     }
 
     func stopListening() {
-        audioEngine.stop()
-        audioEngine.inputNode.removeTap(onBus: 0)
-        recognitionRequest?.endAudio()
-        recognitionTask?.cancel()
-        recognitionTask = nil
-        recognitionRequest = nil
-    }
-
-    private func beginRecognition(onPartial: @escaping (String) -> Void,
-                                  onError: @escaping (Error) -> Void,
-                                  onStopped: @escaping () -> Void) {
-        stopListening()
-
-        do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.record, mode: .measurement, options: .duckOthers)
-            try session.setActive(true, options: .notifyOthersOnDeactivation)
-
-            let request = SFSpeechAudioBufferRecognitionRequest()
-            request.shouldReportPartialResults = true
-            self.recognitionRequest = request
-
-            recognitionTask = recognizer?.recognitionTask(with: request) { result, error in
-                if let result = result {
-                    onPartial(result.bestTranscription.formattedString)
-                    if result.isFinal {
-                        onStopped()
-                    }
-                }
-
-                if let error = error {
-                    onError(error)
-                }
-            }
-
-            let inputNode = audioEngine.inputNode
-            let format = inputNode.outputFormat(forBus: 0)
-            inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
-                self?.recognitionRequest?.append(buffer)
-            }
-
-            audioEngine.prepare()
-            try audioEngine.start()
-        } catch {
-            onError(error)
-        }
+        // Dictation controller is managed by watchOS; no-op.
     }
 }

@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 
+@MainActor
 final class TTSService {
     private let synth = AVSpeechSynthesizer()
     private var audioPlayer: AVAudioPlayer?

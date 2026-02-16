@@ -31,6 +31,7 @@ final class JarvisAPIClient {
 
     func send(text: String) async throws -> String {
         var request = URLRequest(url: chatEndpoint)
+        request.timeoutInterval = 12
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let apiKey, !apiKey.isEmpty {
@@ -59,6 +60,7 @@ final class JarvisAPIClient {
 
     func synthesize(text: String) async throws -> (data: Data, mimeType: String?) {
         var request = URLRequest(url: ttsEndpoint)
+        request.timeoutInterval = 8
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let apiKey, !apiKey.isEmpty {

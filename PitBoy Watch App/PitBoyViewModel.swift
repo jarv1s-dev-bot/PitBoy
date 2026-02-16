@@ -45,22 +45,24 @@ final class PitBoyViewModel: ObservableObject {
 
         errorMessage = nil
         isSending = true
+        defer { isSending = false }
 
         do {
             let reply = try await api.send(text: prompt)
             responseText = reply
 
-            do {
-                let (audioData, _) = try await api.synthesize(text: reply)
-                try ttsService.speakAudioData(audioData)
-            } catch {
-                // Fallback to local watch voice if server TTS fails.
-                ttsService.speak(reply)
+            // Do not block UI/send state on TTS network roundtrip.
+            Task { @MainActor in
+                do {
+                    let (audioData, _) = try await api.synthesize(text: reply)
+                    try ttsService.speakAudioData(audioData)
+                } catch {
+                    // Fallback to local watch voice if server TTS fails.
+                    ttsService.speak(reply)
+                }
             }
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = "Send failed: \(error.localizedDescription)"
         }
-
-        isSending = false
     }
 }

@@ -49,7 +49,14 @@ final class PitBoyViewModel: ObservableObject {
         do {
             let reply = try await api.send(text: prompt)
             responseText = reply
-            ttsService.speak(reply)
+
+            do {
+                let (audioData, _) = try await api.synthesize(text: reply)
+                try ttsService.speakAudioData(audioData)
+            } catch {
+                // Fallback to local watch voice if server TTS fails.
+                ttsService.speak(reply)
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

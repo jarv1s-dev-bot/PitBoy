@@ -6,7 +6,7 @@ const app = express();
 const port = Number(process.env.PORT || 8787);
 
 app.use(cors());
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '2mb' }));
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'pitboy-backend' });
@@ -14,12 +14,8 @@ app.get('/health', (_req, res) => {
 
 app.post('/api/watch-chat', async (req, res) => {
   try {
-    const requiredApiKey = process.env.PITBOY_API_KEY?.trim();
-    if (requiredApiKey) {
-      const supplied = req.header('x-api-key')?.trim();
-      if (!supplied || supplied !== requiredApiKey) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
+    if (!isAuthorized(req)) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const text = String(req.body?.text || '').trim();
@@ -37,9 +33,40 @@ app.post('/api/watch-chat', async (req, res) => {
   }
 });
 
+app.post('/api/watch-tts', async (req, res) => {
+  try {
+    if (!isAuthorized(req)) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const text = String(req.body?.text || '').trim();
+    if (!text) {
+      return res.status(400).json({ error: 'Missing text' });
+    }
+
+    const { audioBuffer, mimeType } = await synthesizeSpeech(text);
+    const audioBase64 = audioBuffer.toString('base64');
+
+    return res.json({
+      audioBase64,
+      mimeType
+    });
+  } catch (error) {
+    console.error('[watch-tts] error', error);
+    return res.status(500).json({ error: 'TTS error' });
+  }
+});
+
 app.listen(port, () => {
   console.log(`PitBoy backend listening on http://localhost:${port}`);
 });
+
+function isAuthorized(req) {
+  const requiredApiKey = process.env.PITBOY_API_KEY?.trim();
+  if (!requiredApiKey) return true;
+  const supplied = req.header('x-api-key')?.trim();
+  return supplied && supplied === requiredApiKey;
+}
 
 async function generateReply({ text, source }) {
   const provider = (process.env.CHAT_PROVIDER || 'echo').toLowerCase();
@@ -123,4 +150,48 @@ async function chatWithOpenClaw({ text, source }) {
 
   const textBody = await response.text();
   return textBody || 'No response';
+}
+
+async function synthesizeSpeech(text) {
+  const ttsProvider = (process.env.TTS_PROVIDER || 'openai').toLowerCase();
+
+  if (ttsProvider === 'openai') {
+    return ttsWithOpenAI(text);
+  }
+
+  throw new Error(`Unsupported TTS_PROVIDER: ${ttsProvider}`);
+}
+
+async function ttsWithOpenAI(text) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('OPENAI_API_KEY missing for TTS');
+
+  const model = process.env.OPENAI_TTS_MODEL || 'gpt-4o-mini-tts';
+  const voice = process.env.OPENAI_TTS_VOICE || 'alloy';
+  const format = process.env.OPENAI_TTS_FORMAT || 'mp3';
+
+  const response = await fetch('https://api.openai.com/v1/audio/speech', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model,
+      voice,
+      input: text,
+      response_format: format
+    })
+  });
+
+  if (!response.ok) {
+    const msg = await response.text();
+    throw new Error(`OpenAI TTS error: ${response.status} ${msg}`);
+  }
+
+  const ab = await response.arrayBuffer();
+  const audioBuffer = Buffer.from(ab);
+  const mimeType = format === 'wav' ? 'audio/wav' : 'audio/mpeg';
+
+  return { audioBuffer, mimeType };
 }

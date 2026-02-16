@@ -11,8 +11,8 @@ final class TTSService {
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = AVSpeechSynthesisVoice(language: "en-GB")
             ?? AVSpeechSynthesisVoice(language: "en-US")
-        utterance.rate = 0.42
-        utterance.pitchMultiplier = 0.92
+        utterance.rate = 0.38
+        utterance.pitchMultiplier = 0.82
 
         synth.stopSpeaking(at: .immediate)
         synth.speak(utterance)

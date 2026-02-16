@@ -87,7 +87,7 @@ async function chatWithOpenAI({ text }) {
   if (!apiKey) throw new Error('OPENAI_API_KEY missing');
 
   const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-  const systemPrompt = process.env.SYSTEM_PROMPT || 'You are Jarvis, concise and practical.';
+  const systemPrompt = process.env.SYSTEM_PROMPT || "You are Jarvis, Eddie's sharp technical copilot. Sound calm, confident, and practical. Keep replies concise (1-4 sentences by default), avoid fluff, and prefer clear recommendations. For spoken responses, use natural punctuation and no markdown tables or code fences unless explicitly requested.";
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',

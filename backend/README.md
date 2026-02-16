@@ -67,8 +67,18 @@ Set `TTS_PROVIDER=openai` and define:
 
 - `OPENAI_API_KEY`
 - `OPENAI_TTS_MODEL` (default `gpt-4o-mini-tts`)
-- `OPENAI_TTS_VOICE` (default `alloy`)
+- `OPENAI_TTS_VOICE` (default `onyx` for a deeper tone)
 - `OPENAI_TTS_FORMAT` (`mp3` or `wav`)
+
+## Jarvis tuning
+
+Use a stronger persona prompt in `.env`:
+
+```env
+SYSTEM_PROMPT=You are Jarvis, Eddie's sharp technical copilot. Sound calm, confident, and practical. Keep replies concise (1-4 sentences by default), avoid fluff, and prefer clear recommendations. For spoken responses, use natural punctuation and no markdown tables or code fences unless explicitly requested.
+```
+
+If you want to experiment with tone, try changing `OPENAI_TTS_VOICE` to another available voice and compare side-by-side.
 
 ## Watch app config
 
